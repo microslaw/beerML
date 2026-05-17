@@ -37,19 +37,39 @@ class BeerDataset(Dataset):
         return image, label
 
 
-def get_transforms():
-    return transforms.Compose([
-        transforms.ToTensor(),
-    ])
+def get_transforms(image_size=224, is_train=False):
+    if is_train:
+        return transforms.Compose(
+            [
+                transforms.Resize((image_size, image_size)),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomRotation(10),
+                transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
+            ]
+        )
+    else:
+        return transforms.Compose(
+            [
+                transforms.Resize((image_size, image_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
+            ]
+        )
 
 
-def get_dataloaders(data_dir="data", batch_size=32, num_workers=2):
+def get_dataloaders(data_dir="data", batch_size=32, image_size=224, num_workers=2):
     images_dir = os.path.join(data_dir, "processed_images")
 
     train_dataset = BeerDataset(
         json_path=os.path.join(data_dir, "train.json"),
         images_dir=images_dir,
-        transform=get_transforms(),
+        transform=get_transforms(image_size, is_train=True),
     )
 
     label_to_idx = train_dataset.label_to_idx
@@ -57,19 +77,25 @@ def get_dataloaders(data_dir="data", batch_size=32, num_workers=2):
     val_dataset = BeerDataset(
         json_path=os.path.join(data_dir, "val.json"),
         images_dir=images_dir,
-        transform=get_transforms(),
+        transform=get_transforms(image_size),
         label_to_idx=label_to_idx,
     )
 
     test_dataset = BeerDataset(
         json_path=os.path.join(data_dir, "test.json"),
         images_dir=images_dir,
-        transform=get_transforms(),
+        transform=get_transforms(image_size),
         label_to_idx=label_to_idx,
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers
+    )
+    test_loader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers
+    )
 
     return train_loader, val_loader, test_loader, label_to_idx
